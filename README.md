@@ -11,3 +11,5 @@ This is repository for Natural Language Processing course of Dept of Art &amp; T
   - [Essence of Linear Algebra](https://youtube.com/playlist?list=PLZHQObOWTQDPD3MizzM2xVFitgF8hE_ab)
   - [Neural Networks](https://youtube.com/playlist?list=PLZHQObOWTQDNU6R1_67000Dx_ZCJB-3pi)
 
+3. Word2Vec
+  - [The Illustrated Word2vec](https://jalammar.github.io/illustrated-word2vec/)
