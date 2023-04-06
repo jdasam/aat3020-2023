@@ -349,7 +349,7 @@ def main():
   print('A batch looks like this: ', batch)
 
   train_loader = DataLoader(trainset, batch_size=2, collate_fn=pack_collate, shuffle=True)
-  model = SentimentModel(len(vocab), hidden_size=32, num_layers=1)
+  model = SentimentModel(len(converter.idx2str), hidden_size=32, num_layers=1)
   batch = next(iter(train_loader))
   print(f"Model output: {model(batch[0])}")
 
