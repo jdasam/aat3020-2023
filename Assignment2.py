@@ -11,7 +11,7 @@ from torch.nn.utils.rnn import PackedSequence, pad_packed_sequence, pack_sequenc
 import torch
 from tqdm.auto import tqdm
 
-from assignment2_pre_defined import get_train_txt_paths_in_split, SentimentModel
+from assignment2_pre_defined import get_train_txt_paths_in_split, SentimentModel, read_txt, make_vocab_from_txt_fns, get_tokenizer, IMDbData, Str2Idx2Str
 
 class IMDbData:
   def __init__(self, path_list):
@@ -117,31 +117,37 @@ class Str2Idx2Str:
     return
 
 
-def pack_collate(batch):
-  '''
-  TODO: Declare variables txts_in_idxs and label_tensor, following the description below
+class PackCollateWithConverter:
+  def __init__(self, converter):
+    self.converter = converter
   
-  word_sentences_in_idxs: A list of torch.LongTensor. Each element in a list is a sequence of integer, and the each integer represents a vocabulary index of word in a sentence.
-                i-th element of word_sentences_in_idxs corresponds to the i-th data sample in the batch  
-  labels: torch.FloatTensor with a shape of [len(batch)]. i-th value of the tensor represents the label of the i-th data sample in the batch (either 0.0 or 1.0)
-  '''
-  
-  # Write your code from here
-  word_sentences_in_idxs = []
-  label_tensor = torch.Tensor([])
-  
-  '''
-  Leave the code below as it is
-  '''
-  assert isinstance(word_sentences_in_idxs, list), f"txts_in_idxs has to be a list, not {type(word_sentences_in_idxs)}"
-  assert isinstance(word_sentences_in_idxs[0], torch.LongTensor), f"An elmenet of txts_in_idxs has to be a torch.LongTensor, not {type(word_sentences_in_idxs[0])}"
-  assert isinstance(label_tensor, torch.FloatTensor), f"labels has to be a torch.FloatTensor, not {type(label_tensor)}"
-  assert label_tensor[-1] == batch[-1][1], "i-th element of labels has to be "
-  
-  packed_sequence = pack_sequence(word_sentences_in_idxs, enforce_sorted=False)
+  def __call__(self, batch):
+    '''
+    TODO: Declare variables txts_in_idxs and label_tensor, following the description below
+    Use self.converter to convert txts to txts_in_idxs
 
-  return packed_sequence, label_tensor
+    word_sentences_in_idxs: A list of torch.LongTensor. Each element in a list is a sequence of integer, and the each integer represents a vocabulary index of word in a sentence.
+                  i-th element of word_sentences_in_idxs corresponds to the i-th data sample in the batch  
+    labels: torch.FloatTensor with a shape of [len(batch)]. i-th value of the tensor represents the label of the i-th data sample in the batch (either 0.0 or 1.0)
+    '''
+    
+    # Write your code from here
+    word_sentences_in_idxs = []
+    label_tensor = torch.FloatTensor([0])
 
+    
+    '''
+    Leave the code below as it is
+    '''
+    assert isinstance(word_sentences_in_idxs, list), f"txts_in_idxs has to be a list, not {type(word_sentences_in_idxs)}"
+    assert isinstance(word_sentences_in_idxs[0], torch.LongTensor), f"An elmenet of txts_in_idxs has to be a torch.LongTensor, not {type(word_sentences_in_idxs[0])}"
+    assert isinstance(label_tensor, torch.FloatTensor), f"labels has to be a torch.FloatTensor, not {type(label_tensor)}"
+    assert label_tensor[-1] == batch[-1][1], "i-th element of labels has to be "
+    
+    packed_sequence = pack_sequence(word_sentences_in_idxs, enforce_sorted=False)
+
+    return packed_sequence, label_tensor
+  
 
 def get_binary_cross_entropy_loss(pred, target, eps=1e-8):
   '''
@@ -301,16 +307,27 @@ class Trainer:
 def main():
   train_path = Path('aclImdb/train')
   test_path = Path('aclImdb/test')
-  train_pths, valid_pths = get_train_txt_paths_in_split('aclImdb/train')
+  train_pths, valid_pths = get_train_txt_paths_in_split(train_path)
   test_pths = list(test_path.rglob("*.txt"))
 
+  print(f"Number of training data: {len(train_pths)}, validation data: {len(valid_pths)}, test data: {len(test_pths)}")
+
+  tokenizer = get_tokenizer('basic_english')
+  entire_vocab = make_vocab_from_txt_fns(train_pths, tokenizer)
+  min_count = 5
+  vocab = sorted([token for token, count in entire_vocab.items() if count >= min_count])
+
+  print(f"Number of tokens in the entire vocabulary: {len(entire_vocab)}")
+  print(f"Number of tokens in the vocabulary with min_count = {min_count}: {len(vocab)}")
+  print(f"First 10 tokens in the vocabulary: {vocab[:10]}")
+  print(f"Last 10 tokens in the vocabulary: {vocab[-10:]}")
+  print(f"Middle 10 tokens in the vocabulary: {vocab[len(vocab)//2-5:len(vocab)//2+5]}")
+
   trainset = IMDbData(train_pths)
-  
   validset = IMDbData(valid_pths)
   short_validset = IMDbData(valid_pths[:100])
   testset = IMDbData(test_pths)
 
-  trainset = IMDbData(train_pths)
   assert len(trainset) == 20000 and len(validset) ==5000 and len(short_validset)==100
   assert len(trainset[0]) == 2
   assert trainset[154][0][10:15] == ['ends', 'right', 'after', 'this', 'little'], "Error in the trainset __getitem__ output"
@@ -318,35 +335,67 @@ def main():
 
   print("Passed all the test cases!")
 
-  wrd2vec_model = gensim.downloader.load("glove-twitter-25")   
-  converter = Str2Idx2Str(wrd2vec_model, vocab_size=30000)
-  input_sentence = trainset[0][0][:20]
+  
+  converter = Str2Idx2Str(vocab)
+  input_sentence = trainset[0][0][:20] #0th sample, text (instead of label), first 20 words
   print(f"Input sentence: {input_sentence}")
   print(f"Converted sentence: {converter(input_sentence)}")
   print(f"Re-converted sentence: {converter(converter(input_sentence))}")
   print(f"Result for a list of sentences/ input_list: {[trainset[i][0][:5]for i in range(1,5)]}, output_list: {converter([trainset[i][0][:5]for i in range(1,5)])}")
 
-
+  pack_collate = PackCollateWithConverter(converter)
   train_loader = DataLoader(trainset, batch_size=32, collate_fn=pack_collate, shuffle=True)
-
-
-  model = SentimentModel(wrd2vec_model, hidden_size=32, num_layers=1)
   batch = next(iter(train_loader))
-  model(batch[0])
+  print('A batch looks like this: ', batch)
 
+  train_loader = DataLoader(trainset, batch_size=2, collate_fn=pack_collate, shuffle=True)
+  model = SentimentModel(len(vocab), hidden_size=32, num_layers=1)
+  batch = next(iter(train_loader))
+  print(f"Model output: {model(batch[0])}")
+
+  test_pred_case = torch.Tensor([9.9894e-01, 2.2645e-03, 1.8131e-01, 8.0153e-03, 9.9972e-01, 1.0378e-03,
+        9.9949e-01, 9.9967e-01, 6.4150e-03, 9.9912e-01, 9.9896e-01, 1.4350e-01,
+        9.9896e-01, 2.1979e-02, 9.9976e-01, 4.5389e-03, 9.9906e-01, 1.0633e-02,
+        9.9749e-01, 5.5501e-04, 7.0052e-04, 2.9509e-04, 3.2752e-04, 9.9940e-01,
+        4.5912e-04, 9.9969e-01, 6.0225e-03, 9.9974e-01, 9.9907e-01, 9.9942e-01,
+        4.0911e-01, 2.8850e-01])
+  test_target_case = torch.Tensor([1., 0., 0., 0., 1., 0., 1., 1., 0., 1., 1., 1., 1., 0., 1., 0., 1., 0.,
+          1., 0., 0., 0., 0., 1., 0., 1., 0., 1., 1., 1., 0., 0.])
+
+  your_result = get_binary_cross_entropy_loss(test_pred_case, test_target_case)
+  print(f"Your BCE result: {your_result}")
+  
   trainset.paths = trainset.paths[:100]
+  testset.paths = testset.paths[:100]
   optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
-  train_loader = DataLoader(trainset, batch_size=32, collate_fn=pack_collate, shuffle=True, drop_last=True)
-  valid_loader = DataLoader(validset, batch_size=128, collate_fn=pack_collate, shuffle=False)
-  test_loader = DataLoader(testset, batch_size=128, collate_fn=pack_collate, shuffle=False)
-  short_valid_loader = DataLoader(short_validset, batch_size=128, collate_fn=pack_collate, shuffle=False)
+  train_loader = DataLoader(trainset, batch_size=16, collate_fn=pack_collate, shuffle=True, drop_last=True)
+  test_loader = DataLoader(testset, batch_size=16, collate_fn=pack_collate)
+  short_valid_loader = DataLoader(short_validset, batch_size=50, collate_fn=pack_collate)
 
   trainer =  Trainer(model, optimizer, get_binary_cross_entropy_loss, train_loader, short_valid_loader, device='cuda')
 
-  trainer.train_by_num_epoch(1)
-  print(f"Last 10 Training loss: {trainer.training_loss[-10:]}")
-  print(f"Training loss: {trainer.training_loss[-10:]}")
+  trainer.model.train()
+  train_batch = next(iter(trainer.train_loader)) # get a batch from train_loader
 
+  loss_track = []
+  for _ in range(10):
+    loss_value, acc = trainer._train_by_single_batch(train_batch) # test the trainer
+    loss_track.append(loss_value)
+
+  assert isinstance(loss_value, float) and loss_value > 0,  "The return of trainer._train_by_single_batch has to be a single float value that is larger than 0"
+  print(f"Loss value for 10 repetition for the same training batch is  {[f'{loss:.4f}' for loss in loss_track]}")
+
+
+  validation_loss, validation_acc = trainer.validate(short_valid_loader)
+  assert isinstance(validation_loss, float) and isinstance(validation_acc, float), "Both return value of trainer.validate has to be float"
+  assert validation_loss > 0, "Validation Loss has to be larger than 1"
+  assert 0 <= validation_acc <= 1, "Validation Acc has to be between 0 and 1"
+
+  print(f"Valid loss: {validation_loss}, Accuracy: {validation_acc}")
+
+
+  trainer.train_by_num_epoch(1)
+  print(f"Last 5 Training loss: {trainer.training_loss[-5:]}")
 
 
 if __name__ == "__main__":
