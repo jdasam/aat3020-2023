@@ -1,9 +1,5 @@
 import torch
-import torch.nn as nn
 from torchtext.data.utils import get_tokenizer
-import matplotlib.pyplot as plt
-import warnings
-import gensim.downloader
 from pathlib import Path
 import random
 from torch.utils.data import DataLoader
@@ -11,7 +7,7 @@ from torch.nn.utils.rnn import PackedSequence, pad_packed_sequence, pack_sequenc
 import torch
 from tqdm.auto import tqdm
 
-from assignment2_pre_defined import get_train_txt_paths_in_split, SentimentModel, read_txt, make_vocab_from_txt_fns, get_tokenizer, IMDbData, Str2Idx2Str
+from assignment2_pre_defined import get_train_txt_paths_in_split, SentimentModel, read_txt, make_vocab_from_txt_fns, get_tokenizer
 
 class IMDbData:
   def __init__(self, path_list):
@@ -207,7 +203,7 @@ class Trainer:
         self.save_model('imdb_sentiment_model_last.pt')
       self.best_valid_accuracy = max(validation_acc, self.best_valid_accuracy)
 
-  def _get_accuracy(self, pred, target):
+  def _get_accuracy(self, pred, target, threshold=0.5):
     '''
     This method calculates accuracy for given prediction and target
     
