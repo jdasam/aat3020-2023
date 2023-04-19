@@ -198,9 +198,9 @@ class Trainer:
       print(f"Epoch {epoch+1}, Training Loss: {loss_value:.4f}, Training Acc: {acc:.4f}, Validation Loss: {validation_loss:.4f}, Validation Acc: {validation_acc:.4f}")
       if validation_acc > self.best_valid_accuracy:
         print(f"Saving the model with best validation accuracy: Epoch {epoch+1}, Acc: {validation_acc:.4f} ")
-        self.save_model('imdb_sentiment_model_best.pt')
+        self.save_model('imdb_sentiment_model_best_py_test.pt')
       else:
-        self.save_model('imdb_sentiment_model_last.pt')
+        self.save_model('imdb_sentiment_model_last_py_test.pt')
       self.best_valid_accuracy = max(validation_acc, self.best_valid_accuracy)
 
   def _get_accuracy(self, pred, target, threshold=0.5):
