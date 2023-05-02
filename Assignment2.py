@@ -7,7 +7,7 @@ from torch.nn.utils.rnn import PackedSequence, pad_packed_sequence, pack_sequenc
 import torch
 from tqdm.auto import tqdm
 
-from assignment2_pre_defined import get_train_txt_paths_in_split, SentimentModel, read_txt, make_vocab_from_txt_fns, get_tokenizer
+from assignment2_pre_defined import get_train_txt_paths_in_split, SentimentModel, read_txt, make_vocab_from_txt_fns
 
 class IMDbData:
   def __init__(self, path_list):
