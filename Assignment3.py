@@ -116,6 +116,8 @@ def main():
   assert torch.allclose(last_hidden_state, last_hidden_state_compare, atol=1e-6), "The last hidden state of LSTM is different"
   assert torch.allclose(last_cell_state, last_cell_state_compare, atol=1e-6), "The last cell state of LSTM is different"
 
+  print("Test passed! Your LSTM implementation returns the exactly same result for PyTorch's official implementation of single-layer uni-directiona LSTM")
+
 
 if __name__ == '__main__':
   main()
