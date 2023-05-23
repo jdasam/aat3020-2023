@@ -27,7 +27,7 @@ class Dataset:
     source_enc = self.src_tokenizer(source)['input_ids']
     target_enc = self.tgt_tokenizer(target)['input_ids']
 
-    return torch.LongTensor(source_enc), torch.LongTensor(target_enc[:-1]), torch.LongTensor(target_enc[1:])
+    return torch.tensor(source_enc, dtype=torch.long), torch.tensor(target_enc[:-1], dtype=torch.long), torch.tensor(target_enc[1:], dtype=torch.long)
 
 
 class Seq2seq(nn.Module):
@@ -38,6 +38,8 @@ class Seq2seq(nn.Module):
 
   def forward(self, src, tgt):
     enc_out = self.encoder(src)
+    if isinstance(src, PackedSequence) and isinstance(tgt, PackedSequence):
+      enc_out = enc_out[:, src.unsorted_indices][:, tgt.sorted_indices ]
     dec_out = self.decoder(tgt, enc_out)
     return dec_out 
 
@@ -101,9 +103,11 @@ class Trainer:
   def train_by_num_epoch(self, num_epochs):
     for epoch in tqdm(range(num_epochs)):
       self.model.train()
-      for batch in tqdm(self.train_loader, leave=False):
-        loss_value = self._train_by_single_batch(batch)
-        self.training_loss.append(loss_value)
+      with tqdm(self.train_loader, leave=False) as pbar:
+        for batch in pbar:
+          loss_value = self._train_by_single_batch(batch)
+          self.training_loss.append(loss_value)
+          pbar.set_description(f"Epoch {epoch+1}, Loss {loss_value:.4f}")
       self.model.eval()
       validation_loss, validation_acc = self.validate()
       self.validation_loss.append(validation_loss)
@@ -149,7 +153,7 @@ class Trainer:
       loss = self.loss_fn(prob, shifted_tgt)
     loss.backward()
     self.optimizer.step()
-    self.optimizer.zero_grad
+    self.optimizer.zero_grad()
 
     return loss.item()
 
@@ -240,6 +244,7 @@ def pack_collate(raw_batch):
 def main():
   dataset_dir = Path('nia_korean_english')
   df = load_data_in_df(dataset_dir)
+  # df = pd.read_csv('../nia_korean_english.csv')
 
   tokenizer_src = BertTokenizerFast.from_pretrained('hugging_kor_32000',
                                                        strip_accents=False,
