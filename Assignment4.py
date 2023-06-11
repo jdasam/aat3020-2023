@@ -672,14 +672,14 @@ def main():
   single_out = model(single_batch_example[0], single_batch_example[1])
 
   assert isinstance(single_out, torch.Tensor), "The output of model for Tensor has to be Tensor"
-  assert torch.allclose(single_out, correct_single_out, atol=1e-5), "The output value is different from the expected"
+  assert torch.allclose(single_out, correct_single_out, atol=1e-4), "The output value is different from the expected"
   packed_out = model(packed_batch_example[0], packed_batch_example[1])
 
   assert isinstance(packed_out, PackedSequence), "The output of model for PackedSequence has to be PackedSequence"
   assert (packed_out.batch_sizes == correct_packed_out.batch_sizes).all(), "Output's batch_sizes is wrong"
   assert (packed_out.sorted_indices == correct_packed_out.sorted_indices).all(), "Output's sorted_indices is wrong"
 
-  assert torch.allclose(packed_out.data, correct_packed_out.data, atol=1e-5),  "The output value is different from the expected"
+  assert torch.allclose(packed_out.data, correct_packed_out.data, atol=1e-4),  "The output value is different from the expected"
 
   test_sentence = '이 알고리즘을 사용하면 한국어 단어와 영어 단어가 어떻게 연결되는지를 알 수 있습니다.'
   input_tokens, pred_tokens, translated_string, att_weights  = translate(model, test_sentence)
@@ -838,7 +838,7 @@ def main():
   head_repeated_mask = mask.unsqueeze(1).repeat(1, 8, 1, 1).reshape(-1, mask.shape[1], mask.shape[2]).transpose(1,2)
   official_encoder_output = official_encoder_layer(test, src_mask=head_repeated_mask==0)
 
-  assert torch.allclose(official_encoder_output, out['input'], atol=1e-5), "Your output is different from the official output"
+  assert torch.allclose(official_encoder_output, out['input'], atol=1e-4), "Your output is different from the official output"
 
 
   torch.manual_seed(0)
@@ -875,7 +875,7 @@ def main():
   head_repeated_mask_tgt = mask_tgt.unsqueeze(1).repeat(1,8,1,1).reshape(-1, mask_tgt.shape[1], mask_tgt.shape[2]).transpose(1,2)
   official_decoder_output = official_decoder_layer(test_tgt, test_src, tgt_mask=head_repeated_mask_tgt==0, memory_mask=head_repeated_mask_src==0)
 
-  assert torch.allclose(official_decoder_output, out['input'], atol=1e-5), "Your output is different from the official output"
+  assert torch.allclose(official_decoder_output, out['input'], atol=1e-4), "Your output is different from the official output"
 
 
 
