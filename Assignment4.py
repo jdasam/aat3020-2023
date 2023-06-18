@@ -421,8 +421,7 @@ def get_multi_head_self_attention(input_tensor, qkv_layer, output_proj_layer, ma
 
         Additionally, use output_proj_layer to project concatenated tensor at the final step
   '''
-  head_repeated_mask = mask.unsqueeze(1).repeat(1, num_head, 1).reshape(-1, mask.shape[1])
-
+  head_repeated_mask = mask.unsqueeze(1).repeat(1, num_head, 1, 1).reshape(-1, mask.shape[1], mask.shape[2])
 
   return
 
