@@ -519,12 +519,13 @@ class Encoder(nn.Module):
     self.token_emb = nn.Embedding(vocab_size, emb_size)
     
   def forward(self, x):
-    mask = x != 0
+    mask = torch.ones([x.shape[0], x.shape[1], x.shape[1]])
+    mask[x==0] = 0
     temp = torch.ones_like(x)
     result = torch.arange(x.shape[-1]).to(x.device) * temp
     x = self.token_emb(x) + self.pos_enc(result)
     return self.layers({'input':x, 'mask':mask})
-
+  
 class Decoder(nn.Module):
   def __init__(self, in_size, emb_size, mlp_size, num_head, num_layers, vocab_size):
     super().__init__()
@@ -535,11 +536,14 @@ class Decoder(nn.Module):
     self.token_emb = nn.Embedding(vocab_size, emb_size)
     
   def forward(self, x, y):
-    mask = torch.tril(torch.ones(x.shape[0], x.shape[1], x.shape[1]))
+    mask = torch.triu(torch.ones(x.shape[0], x.shape[1], x.shape[1]))
+    cross_attention_mask = torch.ones(x.shape[0], y['input'].shape[1], x.shape[1]) # N, Tk, Tq
+    cross_attention_mask[y['mask'][:,:, 0]==0] = 0
+
     temp = torch.ones_like(x)
     result = torch.arange(x.shape[-1]).to(x.device) * temp
     x = self.token_emb(x) + self.pos_enc(result)
-    return self.layers({'input':x, 'decoder_mask':mask, 'encoder_out':y['input'], 'encoder_mask':y['mask']})
+    return self.layers({'input':x, 'decoder_mask':mask, 'encoder_out':y['input'], 'encoder_mask':cross_attention_mask})
 
 class TransformerTranslator(nn.Module):
   def __init__(self, in_size, emb_size, mlp_size, num_head, num_enc_layers, num_dec_layers, enc_vocab_size, dec_vocab_size):
