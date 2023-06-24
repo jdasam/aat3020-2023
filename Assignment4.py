@@ -121,7 +121,7 @@ def get_attention_score_for_a_batch_multiple_query(keys, queries):
   return
 
 
-def get_masked_softmax(attention_score, mask, mask_value=-1e10):
+def get_masked_softmax(attention_score, mask):
   '''
   During the batch computation, each sequence in the batch can have different length.
   To group them as in a single tensor, we usually pad values
@@ -170,7 +170,7 @@ class TranslatorAtt(TranslatorBi):
   def __init__(self, src_tokenizer, tgt_tokenizer, hidden_size=512, num_layers=3):
     super().__init__(src_tokenizer, tgt_tokenizer, hidden_size, num_layers)
     
-    # TODO: define new self.decoder_proj
+    # define new self.decoder_proj
     self.decoder_proj = nn.Linear(hidden_size * 2, self.tgt_vocab_size)
     
   def get_attention_vector(self, encoder_hidden_states, decoder_hidden_states, mask):
@@ -230,7 +230,7 @@ class TranslatorAtt(TranslatorBi):
     else:
       mask = torch.ones(x.shape[0], x.shape[1])
 
-    attention_vec = self.get_attention_vector(enc_hidden_state_by_t, dec_hidden_state_by_t, mask)
+    attention_vec, attention_weight = self.get_attention_vector(enc_hidden_state_by_t, dec_hidden_state_by_t, mask)
 
     # TODO: Write your code from here
     # CAUTION: 
@@ -468,7 +468,7 @@ class CrossAttention(SelfAttention):
   def __init__(self, input_size, hidden_size, num_head, mask_value=0):
     super().__init__(input_size, hidden_size, num_head, mask_value)
     
-  def forward(self, x, y, mask=None):
+  def forward(self, q_seq, kv_seq, mask=None):
     '''
     Arguments:
       x (torch.Tensor): Sequence to be used for query
@@ -481,7 +481,7 @@ class CrossAttention(SelfAttention):
     TODO: Complete this function using your completed functions of below:
     '''
     if mask is None:
-      mask = torch.ones([x.shape[0], y.shape[1], x.shape[1]])
+      mask = torch.ones([q_seq.shape[0], kv_seq.shape[1], q_seq.shape[1]])
 
     return 
 
@@ -670,7 +670,7 @@ def main():
   model.load_state_dict(state_dict)
 
   # Load the pre-calculated example and result
-  prob3_values = torch.load('assignment_4_values.pt')
+  prob3_values = torch.load('assignment4_values.pt')
   single_batch_example, packed_batch_example, correct_single_out, correct_packed_out = prob3_values['single_test_batch'], prob3_values['packed_test_batch'], prob3_values['correct_single_out'],  prob3_values['correct_packed_out'] 
   single_out = model(single_batch_example[0], single_batch_example[1])
 
